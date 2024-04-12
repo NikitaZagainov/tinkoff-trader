@@ -3,3 +3,5 @@
 /.vscode
 /*.log
 /.env
+strategies/drl_strategy.py
+main.py
