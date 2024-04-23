@@ -3,5 +3,8 @@
 /.vscode
 /*.log
 /.env
+/models/
+/data/
+/notebooks/
 strategies/drl_strategy.py
 main.py
