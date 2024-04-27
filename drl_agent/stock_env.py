@@ -26,7 +26,7 @@ class MultiStockTradingEnv(Env):
         self.dates = self.df.index.get_level_values(0).unique()
         self.tics = self.df.index.get_level_values(1).unique()
 
-        self.action_space = Box(low=-1,
+        self.action_space = Box(low=0,
                                 high=1,
                                 shape=[len(self.tics)],
                                 dtype=np.float32)
@@ -65,8 +65,8 @@ class MultiStockTradingEnv(Env):
             return self.state, 0, True, True, {}
 
         action = (action * self.limits).astype(int)
-        sell_ids = np.where(action < 0)[0]
-        buy_ids = np.where(action > 0)[0]
+        sell_ids = np.where(action < self.shares)[0]
+        buy_ids = np.where(action > self.shares)[0]
         prices = self.df.unstack().iloc[self.cur_idx]["close"].values
         self.state[1 + len(self.tics):] = self.scaler.transform(
             self.df.unstack().iloc[self.cur_idx].values.reshape(
@@ -75,22 +75,18 @@ class MultiStockTradingEnv(Env):
         for idx in sell_ids:
             current = self.shares[idx]
             price = prices[idx]
-            sell_amount = min(action[idx], current)
+            sell_amount = current - action[idx]
             self.shares[idx] -= sell_amount
             self.balance += sell_amount * price * (1 - self.comission -
                                                    self.epsilon)
-
+        
         for idx in buy_ids:
             current = self.shares[idx]
             price = prices[idx]
-            limit = self.limits[idx]
-            buy_amount = int(
-                min(
-                    action[idx], limit - current, self.balance /
-                    (price * (1 + self.comission * self.epsilon))))
+            buy_amount = action[idx] - current
             self.shares[idx] += buy_amount
             self.balance -= buy_amount * price * (1 + self.comission +
-                                                  self.epsilon)
+                                                self.epsilon)
 
         self.state[0] = self.balance / self.initial_balance
         self.state[1:len(self.tics) + 1] = self.shares / self.limits
