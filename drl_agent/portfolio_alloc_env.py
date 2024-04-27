@@ -8,12 +8,12 @@ from gymnasium.spaces import Box, Space
 
 class PortfolioAllocationEnv(Env):
 
-    def __init__(self, df: pd.DataFrame, features: list[str], comission: float,
+    def __init__(self, df: pd.DataFrame, features: list[str], commission: float,
                  limits: list[int], reward_scaling: int,
                  initial_balance: float):
         self.df = df.dropna()
         self.features = features
-        self.comission = comission
+        self.commission = commission
         self.limits = np.array(limits)
         self.reward_scaling = reward_scaling
         self.initial_balance = initial_balance
@@ -55,18 +55,18 @@ class PortfolioAllocationEnv(Env):
         available_money = self.portfolio_buffer[-1]
         available_shares = np.floor(available_money * action) 
         
-        to_buy = np.floor(available_shares / prices / (1 + self.comission + self.epsilon))
+        to_buy = np.floor(available_shares / prices / (1 + self.commission + self.epsilon))
         delta = to_buy - self.shares
         
         sell_ids = np.where(delta < 0)[0]
         buy_ids = np.where(delta > 0)[0]
         
         for idx in sell_ids:
-            self.balance += (-1) * prices[idx] * delta[idx] * (1 - self.comission - self.epsilon)
+            self.balance += (-1) * prices[idx] * delta[idx] * (1 - self.commission - self.epsilon)
             self.shares[idx] += delta[idx]
             
         for idx in buy_ids:
-            self.balance -= prices[idx] * delta[idx] * (1 + self.comission + self.epsilon)
+            self.balance -= prices[idx] * delta[idx] * (1 + self.commission + self.epsilon)
             self.shares[idx] += delta[idx]
             
         self.state = self.scaler.transform(
@@ -90,5 +90,5 @@ class PortfolioAllocationEnv(Env):
     def calculate_portfolio(self, prices):
         portfolio = self.balance
         for i in range(len(self.shares)):
-            portfolio += prices[i] * self.shares[i] * (1 - self.comission - self.epsilon)
+            portfolio += prices[i] * self.shares[i] * (1 - self.commission - self.epsilon)
         return portfolio
