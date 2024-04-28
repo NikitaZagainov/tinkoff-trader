@@ -122,7 +122,8 @@ class Trader:
     def candles_to_df(self, candles: list, ticker: str = None) -> pd.DataFrame:
 
         def to_decimal(quotation):
-            return float(f"{quotation['units']}.{quotation['nano']}")
+            fractional = quotation["nano"] / Decimal("10e8")
+            return Decimal(quotation["units"]) + fractional
 
         df = pd.DataFrame(candles)
         try:
