@@ -9,10 +9,14 @@ class BaseStrategy(ABC):
     def get_ticker_list(self) -> list[str]:
         pass
 
-    def get_historical_candles_config(
-            self) -> tuple[timedelta, CandleInterval]:
+    def get_historical_candles_config(self) -> tuple[timedelta, CandleInterval]:
         pass
 
-    def get_trading_action(self, data: pd.DataFrame, available_money: float,
-                           current_shares: dict[str, int]) -> dict[str, int]:
+    def get_trading_action(
+        self,
+        data: pd.DataFrame,
+        available_money: float,
+        current_shares: dict[str, int],
+        prices: dict[str, float],
+    ) -> dict[str, int]:
         pass

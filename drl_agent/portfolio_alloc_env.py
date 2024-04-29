@@ -32,7 +32,7 @@ class PortfolioAllocationEnv(Env):
         self.tics = self.df.index.get_level_values(1).unique()
 
         self.action_space = Box(
-            low=-10, high=10, shape=[len(self.tics)], dtype=np.float32
+            low=-100, high=100, shape=[len(self.tics) + 1], dtype=np.float32
         )
 
         self.observation_space = Box(
@@ -51,14 +51,15 @@ class PortfolioAllocationEnv(Env):
         if self.cur_idx == len(self.dates):
             return self.state, 0, True, True, {}
 
-        action = softmax(action)
+        invest_fraction = 1 / (1 + np.exp(-action[0]))
+        allocation = softmax(action[1:])
 
         prices = self.df.unstack().iloc[self.cur_idx]["close"].values
 
         self.portfolio_buffer.append(self.calculate_portfolio(prices))
         available_money = self.portfolio_buffer[-1]
-        available_shares = available_money * action
-
+        available_shares = invest_fraction * available_money * allocation
+        
         to_buy = np.floor(
             available_shares / prices / (1 + self.commission + self.epsilon)
         )
