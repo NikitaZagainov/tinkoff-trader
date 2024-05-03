@@ -60,11 +60,13 @@ class DRLPortfolioAllocationStrategy(BaseStrategy):
         current_shares: dict[str, int],
         prices: dict[str, float]
     ) -> dict[str, int]:
+        self.logger.info("current shares: %s", current_shares)
+        
         data = data.pivot(columns="tic", index="time")
         data = self.add_indicators(data.dropna())
         
         state = self.compose_model_state(data)
-        self.logger.info("current state: %s", state)
+        
         lstm_state_old = self.get_lstm_state()
         action, lstm_state_new = self.model.predict(state, state=lstm_state_old, deterministic=True)
         self.save_lstm_state(lstm_state_new)
@@ -85,20 +87,17 @@ class DRLPortfolioAllocationStrategy(BaseStrategy):
         delta = dict()
         for tic, share in zip(self.ticker_list, shares):
             if share - current_shares[tic] != 0:
-                delta[tic] = share - current_shares
+                delta[tic] = int(share - current_shares[tic])
                 
         self.logger.info("action: %s", delta)
-        raise Exception("Not so fast! You are not tested yet!")
         return delta
         
         
     def compose_model_state(self, df: pd.DataFrame):
         scaler = StandardScaler()
         scaler.fit(df[FEATURES])
-        today = pd.to_datetime(datetime.now().date())
-        df.index = pd.to_datetime(df.index).tz_localize(None)
-        
-        state = scaler.transform(df.loc[today][FEATURES].values.reshape(1, -1)).reshape(-1)
+        last_date = df.index.max()
+        state = scaler.transform(df.loc[last_date][FEATURES].values.reshape(1, -1)).reshape(-1)
         
         return state
         

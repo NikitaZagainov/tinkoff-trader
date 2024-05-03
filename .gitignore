@@ -6,5 +6,6 @@
 /models/
 /data/
 /notebooks/
+sell_all.py
 strategies/drl_strategy.py
 main.py

@@ -47,6 +47,7 @@ class Trader:
         self.figi_list = self.ticker_df["figi"].tolist()
         self.lot_list = self.ticker_df["lot"].tolist()
 
+        self.figi2lot = {f: l for f, l in zip(self.figi_list, self.lot_list)}
         self.figi2ticker = {f: t for f, t in zip(self.figi_list, self.ticker_list)}
         self.ticker2figi = {t: f for t, f in zip(self.ticker_list, self.figi_list)}
 
@@ -154,8 +155,8 @@ class Trader:
         for tic in self.ticker_list:
             for label in ["open", "close", "high", "low"]:
                 lot = self.lot_list[self.ticker_list.index(tic)]
-                df[df["tic"] == tic][label] *= lot
-
+                df.loc[df["tic"] == tic, label] *= lot
+        
         return df.drop(columns=["is_complete", "candle_source"])
 
     async def buy(self, figi: str, quantity: int) -> PostOrderResponse:
@@ -211,15 +212,17 @@ class Trader:
             if position.figi not in self.figi_list:
                 continue
             shares[self.figi2ticker[position.figi]] = float(
-                quotation_to_decimal(position.quantity)
+                quotation_to_decimal(position.quantity_lots)
             )
         return shares
 
-    async def get_prices(self):
+    async def get_current_prices(self):
         response = await self.client.market_data.get_last_prices(figi=self.figi_list)
 
         return {
-            item.figi: quotation_to_decimal(item.price) for item in response.last_prices
+            self.figi2ticker[item.figi]: float(quotation_to_decimal(item.price))
+            * self.figi2lot[item.figi]
+            for item in response.last_prices
         }
 
     async def trading_step(self):
@@ -228,7 +231,7 @@ class Trader:
 
         balance = await self.get_current_balance()
         shares = await self.get_current_shares()
-        prices = await self.get_prices()
+        prices = await self.get_current_prices()
 
         actions = self.strategy.get_trading_action(df, balance, shares, prices)
         self.logger.info("Actions performed by strategy: \n%s", actions)
@@ -237,12 +240,18 @@ class Trader:
                 continue
 
             figi = self.ticker2figi[ticker]
+            if action < 0:
+                self.logger.info("Selling %s of %s (%s)", -action, ticker, figi)
+                await self.sell(figi, -action)
+        
+        for ticker, action in actions.items():
+            if ticker not in self.ticker2figi:
+                continue
+
+            figi = self.ticker2figi[ticker]
             if action > 0:
                 self.logger.info("Bying %s of %s (%s)", action, ticker, figi)
                 await self.buy(figi, action)
-            elif action < 0:
-                self.logger.info("Selling %s of %s (%s)", -action, ticker, figi)
-                await self.sell(figi, -action)
 
     async def start_trading(self):
         market_data_stream: AsyncMarketDataStreamManager = (

@@ -28,13 +28,13 @@ FEATURES = [
 async def main():
     async with AsyncClient(TOKEN, target=INVEST_GRPC_API_SANDBOX, app_name="") as client:
         model = A2C.load("./models/a2c_low_no_five/best_model.zip")
-        strategy = DRLStrategy(TICKERS, timedelta(days=200),
+        strategy = DRLStrategy(TICKERS, timedelta(days=20),
                                CandleInterval.CANDLE_INTERVAL_DAY, model)
         trader = Trader(client, ACCOUNT_ID, strategy)
         await trader.init_trader(1_200_000)
         
         data = await trader.get_historical_data()
-        trader.logger.info(data.pivot(index="time", columns="tic", values="close"))
+        trader.logger.info(data)
 
 
 if __name__ == "__main__":
