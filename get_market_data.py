@@ -32,7 +32,7 @@ async def main():
                                CandleInterval.CANDLE_INTERVAL_DAY, model)
         trader = Trader(client, ACCOUNT_ID, strategy)
         await trader.init_trader(1_200_000)
-        
+
         data = await trader.get_historical_data()
         trader.logger.info(data)
 
